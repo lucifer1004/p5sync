@@ -11,6 +11,7 @@ const App: React.FC = () => {
       .substr(2, 8),
   )
   const chatRef = useRef<any>(null)
+  const socketRef = useRef<any>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
   const sketch = (width: number) => (p: p5) => {
     let lines: Array<Object> = []
@@ -32,6 +33,15 @@ const App: React.FC = () => {
           p.stroke(0)
         }
       })
+
+      socketRef.current.on('get-history', (data: any) => {
+        p.clear()
+        data.forEach((op: any) => {
+          op.lines.forEach((line: any) =>
+            p.line(line.mouseX, line.mouseY, line.pmouseX, line.pmouseY),
+          )
+        })
+      })
     }
 
     p.draw = () => {
@@ -52,6 +62,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const socket = socketCluster.create({port: 8000})
+    socketRef.current = socket
     const channel = socket.subscribe('p5')
     chatRef.current = channel
     socket.on('connect', () => {

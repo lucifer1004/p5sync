@@ -70,7 +70,7 @@ for (let i in SOCKETCLUSTER_OPTIONS) {
   }
 }
 
-const start = function() {
+const start = () => {
   const socketCluster = new SocketCluster(options)
 
   socketCluster.on(
@@ -127,6 +127,7 @@ const filesReadyPromises = [
   startWhenFileIsReady(brokerControllerPath),
   startWhenFileIsReady(workerClusterControllerPath),
 ]
+
 Promise.all(filesReadyPromises)
   .then(() => {
     start()

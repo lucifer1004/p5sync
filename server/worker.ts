@@ -34,14 +34,22 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    const count = 0
+    scServer.exchange.set('history', [], err => console.log(err))
 
     /*
       In here we handle our incoming realtime connections and listen for events.
     */
     scServer.on('connection', (socket: any) => {
-      // Some sample logic to show how to handle client events,
-      // replace this with your own logic
+      scServer.exchange.get('history', (err, history) => {
+        socket.emit('get-history', history)
+      })
+
+      const channel = scServer.exchange.subscribe('p5')
+      channel.watch((data: any) => {
+        scServer.exchange.get('history', (err, history) => {
+          scServer.exchange.set('history', [...history, data], err => {})
+        })
+      })
     })
   }
 }
