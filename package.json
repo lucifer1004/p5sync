@@ -7,18 +7,20 @@
   "scripts": {
     "start:server": "cd server && yarn start",
     "start:react": "cd react && yarn start",
-    "start:vanilla": "cd vanilla && yarn start"
+    "start:vanilla": "cd vanilla && yarn start",
+    "start:vue": "cd vue && yarn start",
+    "format": "prettier --write '{server,react/src,vanilla,vue/src}/**/*.{js,jsx,ts,tsx,json,vue}'"
   },
   "workspaces": [
     "server",
     "react",
-    "vanilla"
+    "vanilla",
+    "vue"
   ],
   "devDependencies": {
     "husky": "^2.1.0",
-    "lerna": "^3.13.2",
     "lint-staged": "^8.1.5",
-    "nodemon": "^1.18.11",
+    "nodemon": "^1.19.0",
     "prettier": "^1.17.0",
     "ts-node": "^8.1.0"
   },

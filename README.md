@@ -2,3 +2,4 @@
 
 - React
 - Vanilla JS
+- Vue

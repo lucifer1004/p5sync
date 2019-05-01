@@ -1,0 +1,29 @@
+{
+  "name": "p5sync-vue",
+  "version": "0.0.1",
+  "author": "Gabriel Wu <wuzihua@pku.edu.cn>",
+  "license": "MIT",
+  "scripts": {
+    "start": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "core-js": "^3.0.1",
+    "p5": "^0.8.0",
+    "socketcluster-client": "^14.2.2",
+    "vue": "^2.6.10",
+    "vue-router": "^3.0.3",
+    "vuex": "^3.0.1"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.7.0",
+    "@vue/cli-plugin-typescript": "^3.7.0",
+    "@vue/cli-service": "^3.7.0",
+    "@types/p5": "^0.7.2",
+    "@types/socketcluster-client": "^13.0.2",
+    "stylus": "^0.54.5",
+    "stylus-loader": "^3.0.2",
+    "typescript": "^3.4.3",
+    "vue-template-compiler": "^2.5.21"
+  }
+}
