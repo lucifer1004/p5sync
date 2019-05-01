@@ -1,0 +1,46 @@
+{
+  "name": "socketcluster-sample",
+  "description": "A sample SocketCluster app",
+  "version": "1.0.0",
+  "contributors": [
+    {
+      "name": "Jonathan Gros-Dubois",
+      "email": "grosjona@yahoo.com.au"
+    }
+  ],
+  "dependencies": {
+    "connect": "3.6.6",
+    "cors": "^2.8.5",
+    "express": "4.16.3",
+    "minimist": "1.1.0",
+    "morgan": "1.7.0",
+    "sc-errors": "^1.4.1",
+    "sc-framework-health-check": "^2.0.0",
+    "sc-hot-reboot": "^1.0.0",
+    "sc-uws": "^10.148.2",
+    "scc-broker-client": "^6.1.0",
+    "serve-static": "1.13.2",
+    "socketcluster": "^14.3.2",
+    "socketcluster-client": "^14.2.1"
+  },
+  "keywords": [
+    "websocket",
+    "server",
+    "realtime",
+    "cluster",
+    "scalable"
+  ],
+  "readmeFilename": "README.md",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.5",
+    "@types/minimist": "^1.2.0",
+    "@types/morgan": "^1.7.35",
+    "@types/sc-framework-health-check": "^2.0.0",
+    "@types/sc-hot-reboot": "^1.0.2",
+    "@types/scc-broker-client": "^6.1.0",
+    "ts-node": "^8.1.0"
+  }
+}
