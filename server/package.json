@@ -1,7 +1,8 @@
 {
-  "name": "socketcluster-sample",
-  "description": "A sample SocketCluster app",
-  "version": "1.0.0",
+  "name": "p5sync-server",
+  "description": "WebSocket server for P5Sync",
+  "version": "0.0.1",
+  "license": "MIT",
   "contributors": [
     {
       "name": "Jonathan Gros-Dubois",

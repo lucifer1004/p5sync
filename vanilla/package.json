@@ -1,34 +1,22 @@
 {
-  "name": "client",
+  "name": "vanilla",
   "version": "0.0.1",
   "author": "Gabriel Wu <wuzihua@pku.edu.cn>",
   "license": "MIT",
+  "scripts": {
+    "start": "parcel index.html"
+  },
   "dependencies": {
-    "@types/socketcluster-client": "^13.0.2",
     "p5": "^0.8.0",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6",
-    "socket.io-client": "^2.2.0",
     "socketcluster-client": "^14.2.2"
   },
   "devDependencies": {
     "@types/jest": "24.0.12",
     "@types/node": "11.13.8",
     "@types/p5": "^0.7.2",
-    "@types/react": "16.8.15",
-    "@types/react-dom": "16.8.4",
-    "@types/socket.io-client": "^1.4.32",
-    "react-scripts": "3.0.0",
+    "@types/socketcluster-client": "^13.0.2",
+    "parcel": "^1.12.3",
     "typescript": "3.4.5"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
   },
   "browserslist": {
     "production": [

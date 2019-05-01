@@ -13,7 +13,7 @@ class MySCWorker extends SCWorker {
 
     const app = express()
     const corsOptions = {
-      origin: 'http://localhost:3000',
+      origin: ['http://localhost:3000', 'http://localhost:1234'],
       credentials: true,
       optionsSuccessStatus: 200, // some legacy browsers (IE11, constious SmartTVs) choke on 204
     }
@@ -36,18 +36,20 @@ class MySCWorker extends SCWorker {
 
     scServer.exchange.set('history', [], err => console.log(err))
 
-    /*
-      In here we handle our incoming realtime connections and listen for events.
-    */
-    scServer.on('connection', (socket: any) => {
+    const channel = scServer.exchange.subscribe('p5')
+    channel.watch((data: any) => {
       scServer.exchange.get('history', (err, history) => {
-        socket.emit('get-history', history)
+        scServer.exchange.set('history', [...history, data], err => {})
       })
+    })
 
-      const channel = scServer.exchange.subscribe('p5')
-      channel.watch((data: any) => {
+    scServer.on('connection', (socket: any) => {
+      socket.on('request_history', () => {
         scServer.exchange.get('history', (err, history) => {
-          scServer.exchange.set('history', [...history, data], err => {})
+          console.log(
+            `dispatching history for ${socket.id}, total: ${history.length}`,
+          )
+          socket.emit('dispatch_history', history)
         })
       })
     })

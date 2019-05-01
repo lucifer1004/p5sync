@@ -6,11 +6,13 @@
   "license": "MIT",
   "scripts": {
     "start:server": "cd server && yarn start",
-    "start:client": "cd client && yarn start"
+    "start:react": "cd react && yarn start",
+    "start:vanilla": "cd vanilla && yarn start"
   },
   "workspaces": [
     "server",
-    "client"
+    "react",
+    "vanilla"
   ],
   "devDependencies": {
     "husky": "^2.1.0",
