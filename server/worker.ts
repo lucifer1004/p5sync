@@ -36,43 +36,46 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    // scServer.exchange.set('history', [], err => {if (err) throw err})
-    redis.set('history', JSON.stringify([]))
+    redis.set('history_length', JSON.stringify(0))
 
     const channel = scServer.exchange.subscribe('p5')
     channel.watch((data: any) => {
-      // scServer.exchange.get('history', (err, history) => {
-      //   scServer.exchange.set('history', [...history, data], err => {if (err) throw err})
-      // })
       switch (data.mode) {
         case 'clear':
-          redis.set('history', JSON.stringify([]))
+          redis.set('history_length', JSON.stringify(0))
           return
         default:
-          redis.get('history', (err, res) => {
+          redis.get('history_length', (err, res) => {
             if (err) throw err
-            const history = JSON.parse(res)
-            redis.set('history', JSON.stringify([...history, data]))
+            const history_length = JSON.parse(res)
+            redis.set(`history_${history_length}`, JSON.stringify(data))
+            redis.set('history_length', JSON.stringify(history_length + 1))
           })
       }
     })
 
     scServer.on('connection', (socket: any) => {
       socket.on('request_history', () => {
-        // scServer.exchange.get('history', (err, history) => {
-        //   if (err) throw err
-        //   console.log(
-        //     `dispatching history for ${socket.id}, total: ${history.length}`,
-        //   )
-        //   socket.emit('dispatch_history', history)
-        // })
-        redis.get('history', (err, res) => {
+        redis.get('history_length', (err, res) => {
           if (err) throw err
-          const history = JSON.parse(res)
-          console.log(
-            `dispatching history for ${socket.id}, total: ${history.length}`,
-          )
-          socket.emit('dispatch_history', history)
+          const history_length = JSON.parse(res)
+          redis
+            .pipeline(
+              Array.from({length: history_length}, (v, i) => {
+                return ['get', `history_${i}`]
+              }),
+            )
+            .exec((err, results) => {
+              const history = results.map((result: any) =>
+                JSON.parse(result[1]),
+              )
+              console.log(
+                `dispatching history for ${socket.id}, total: ${
+                  history.length
+                }`,
+              )
+              socket.emit('dispatch_history', history)
+            })
         })
       })
     })

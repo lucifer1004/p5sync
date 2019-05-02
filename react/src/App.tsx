@@ -87,7 +87,7 @@ const App: React.FC = () => {
       switch (modeRef.current) {
         case 'pencil':
           if (p.mouseIsPressed === true) {
-            // if (!Point.validate(new Point(p.mouseX, p.mouseY))) return
+            if (!Point.validate(new Point(p.mouseX, p.mouseY))) return
             p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
             lines.push({
               end: {
@@ -132,8 +132,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const socket = socketCluster.create({port: 8000})
-    socketRef.current = socket
     const channel = socket.subscribe('p5')
+    socketRef.current = socket
     channelRef.current = channel
     socket.on('connect', () => {
       if (!boardExistRef.current) {
