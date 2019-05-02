@@ -13,6 +13,7 @@
     "connect": "3.6.6",
     "cors": "^2.8.5",
     "express": "4.16.4",
+    "ioredis": "^4.9.0",
     "minimist": "1.2.0",
     "morgan": "1.9.1",
     "sc-errors": "^2.0.0",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.5",
+    "@types/ioredis": "^4.0.10",
     "@types/minimist": "^1.2.0",
     "@types/morgan": "^1.7.35",
     "@types/sc-framework-health-check": "^2.0.0",

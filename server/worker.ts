@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import Redis from 'ioredis'
 import morgan from 'morgan'
 import path from 'path'
 import healthChecker from 'sc-framework-health-check'
@@ -21,6 +22,7 @@ class MySCWorker extends SCWorker {
 
     const httpServer = this.httpServer
     const scServer = this.scServer
+    const redis = new Redis()
 
     if (environment === 'dev') {
       // Log every HTTP request. See https://github.com/expressjs/morgan for other
@@ -34,18 +36,39 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    scServer.exchange.set('history', [], err => console.log(err))
+    // scServer.exchange.set('history', [], err => {if (err) throw err})
+    redis.set('history', JSON.stringify([]))
 
     const channel = scServer.exchange.subscribe('p5')
     channel.watch((data: any) => {
-      scServer.exchange.get('history', (err, history) => {
-        scServer.exchange.set('history', [...history, data], err => {})
-      })
+      // scServer.exchange.get('history', (err, history) => {
+      //   scServer.exchange.set('history', [...history, data], err => {if (err) throw err})
+      // })
+      switch (data.mode) {
+        case 'clear':
+          redis.set('history', JSON.stringify([]))
+          return
+        default:
+          redis.get('history', (err, res) => {
+            if (err) throw err
+            const history = JSON.parse(res)
+            redis.set('history', JSON.stringify([...history, data]))
+          })
+      }
     })
 
     scServer.on('connection', (socket: any) => {
       socket.on('request_history', () => {
-        scServer.exchange.get('history', (err, history) => {
+        // scServer.exchange.get('history', (err, history) => {
+        //   if (err) throw err
+        //   console.log(
+        //     `dispatching history for ${socket.id}, total: ${history.length}`,
+        //   )
+        //   socket.emit('dispatch_history', history)
+        // })
+        redis.get('history', (err, res) => {
+          if (err) throw err
+          const history = JSON.parse(res)
           console.log(
             `dispatching history for ${socket.id}, total: ${history.length}`,
           )

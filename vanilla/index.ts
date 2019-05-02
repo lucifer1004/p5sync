@@ -1,21 +1,7 @@
 import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
 import socketCluster from 'socketcluster-client'
-
-interface Point {
-  x: number
-  y: number
-}
-
-interface Circle {
-  center: Point
-  radius: number
-}
-
-interface Line {
-  start: Point
-  end: Point
-}
+import {Line, Circle} from './interfaces'
 
 const applyPencil = (p: p5, data: any) => {
   data.lines.forEach((line: Line) =>
@@ -34,13 +20,17 @@ const applyRubber = (p: p5, data: any) => {
   p.rect(0, 0, 1280, 720)
 }
 
-let mode = 'pencil'
+const applyClear = (p: p5) => {
+  p.clear()
+  p.rect(0, 0, 1280, 720)
+}
 
 const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
   let lines: Line[] = []
   let circles: Circle[] = []
 
   p.setup = () => {
+    pRef.current = p
     p.createCanvas(1280, 720)
     p.stroke(0)
     p.strokeWeight(2)
@@ -48,12 +38,16 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
     p.noFill()
     p.rect(0, 0, 1280, 720)
     channel.watch((data: any) => {
+      if (data.id === id) return
       switch (data.mode) {
         case 'pencil':
           applyPencil(p, data)
           return
         case 'rubber':
           applyRubber(p, data)
+          return
+        case 'clear':
+          applyClear(p)
           return
         default:
           return
@@ -73,6 +67,11 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
             return
         }
       })
+    })
+
+    socket.on('clear', () => {
+      p.clear()
+      p.rect(0, 0, 1280, 720)
     })
   }
 
@@ -129,6 +128,8 @@ const channel = socket.subscribe('p5')
 const id = Math.random()
   .toString(16)
   .substr(2, 8)
+let mode = 'pencil'
+const pRef = {current: null}
 
 const pencil = document.getElementById('pencil')
 pencil.onclick = () => {
@@ -137,6 +138,11 @@ pencil.onclick = () => {
 const rubber = document.getElementById('rubber')
 rubber.onclick = () => {
   mode = 'rubber'
+}
+const clear = document.getElementById('clear')
+clear.onclick = () => {
+  applyClear(pRef.current)
+  channel.publish({id, mode: 'clear'})
 }
 
 socket.on('connect', () => {

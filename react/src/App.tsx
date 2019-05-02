@@ -2,21 +2,7 @@ import React, {useEffect, useRef, useState} from 'react'
 import socketCluster from 'socketcluster-client'
 import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
-
-interface Point {
-  x: number
-  y: number
-}
-
-interface Circle {
-  center: Point
-  radius: number
-}
-
-interface Line {
-  start: Point
-  end: Point
-}
+import {Point, Line, Circle} from './interfaces'
 
 const applyPencil = (p: p5, data: any) => {
   data.lines.forEach((line: Line) =>
@@ -35,22 +21,29 @@ const applyRubber = (p: p5, data: any) => {
   p.rect(0, 0, 1280, 720)
 }
 
+const applyClear = (p: p5) => {
+  p.clear()
+  p.rect(0, 0, 1280, 720)
+}
+
 const App: React.FC = () => {
-  const [boardExist, setBoardExist] = useState(false)
   const [id] = useState(
     Math.random()
       .toString(16)
       .substr(2, 8),
   )
+  const boardExistRef = useRef<boolean>(false)
   const modeRef = useRef<string>('pencil')
   const channelRef = useRef<any>(null)
   const socketRef = useRef<any>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
+  const pRef = useRef<any>(null)
   const sketch = (p: p5) => {
     let lines: Line[] = []
     let circles: Circle[] = []
 
     p.setup = () => {
+      pRef.current = p
       p.createCanvas(1280, 720)
       p.stroke(0)
       p.strokeWeight(2)
@@ -58,12 +51,16 @@ const App: React.FC = () => {
       p.noFill()
       p.rect(0, 0, 1280, 720)
       channelRef.current.watch((data: any) => {
+        if (data.id === id) return
         switch (data.mode) {
           case 'pencil':
             applyPencil(p, data)
             return
           case 'rubber':
             applyRubber(p, data)
+            return
+          case 'clear':
+            applyClear(p)
             return
           default:
             return
@@ -90,6 +87,7 @@ const App: React.FC = () => {
       switch (modeRef.current) {
         case 'pencil':
           if (p.mouseIsPressed === true) {
+            // if (!Point.validate(new Point(p.mouseX, p.mouseY))) return
             p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
             lines.push({
               end: {
@@ -138,10 +136,10 @@ const App: React.FC = () => {
     const channel = socket.subscribe('p5')
     channelRef.current = channel
     socket.on('connect', () => {
-      if (!boardExist) {
+      if (!boardExistRef.current) {
         if (nodeRef.current) new p5(sketch, nodeRef.current)
         console.log('connected to server')
-        setBoardExist(true)
+        boardExistRef.current = true
       } else console.log('reconnected to server')
 
       socket.emit('request_history')
@@ -164,6 +162,14 @@ const App: React.FC = () => {
         }}
       >
         Pencil
+      </button>
+      <button
+        onClick={() => {
+          applyClear(pRef.current)
+          channelRef.current.publish({id, mode: 'clear'})
+        }}
+      >
+        Clear
       </button>
       <div ref={nodeRef} />
     </div>
