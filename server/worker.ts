@@ -7,6 +7,29 @@ import healthChecker from 'sc-framework-health-check'
 import serveStatic from 'serve-static'
 import SCWorker from 'socketcluster/scworker'
 
+interface Point {
+  x: number
+  y: number
+}
+
+interface Circle {
+  center: Point
+  radius: number
+}
+
+interface Line {
+  start: Point
+  end: Point
+}
+
+interface Operation {
+  id: string
+  mode: 'clear' | 'pencil' | 'rubber'
+  lines?: Line[]
+  circles?: Circle[]
+  timestamp?: Date
+}
+
 class MySCWorker extends SCWorker {
   run() {
     console.log('   >> Worker PID:', process.pid)
@@ -36,47 +59,97 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    redis.set('history_length', JSON.stringify(0))
+    redis.set('room/default/users', JSON.stringify([]))
 
     const channel = scServer.exchange.subscribe('p5')
-    channel.watch((data: any) => {
-      switch (data.mode) {
-        case 'clear':
-          redis.set('history_length', JSON.stringify(0))
-          return
-        default:
-          redis.get('history_length', (err, res) => {
-            if (err) throw err
-            const history_length = JSON.parse(res)
-            redis.set(`history_${history_length}`, JSON.stringify(data))
-            redis.set('history_length', JSON.stringify(history_length + 1))
-          })
+    channel.watch(async (data: Operation) => {
+      try {
+        switch (data.mode) {
+          case 'clear':
+            await redis.set('room/default/users', JSON.stringify([]))
+            return
+          default:
+            const res = await redis.get('room/default/users')
+            const users = JSON.parse(res)
+            const dataWithTime = {...data, timestamp: Date.now()}
+            if (users.find((user: string) => user === data.id)) {
+              const length =
+                JSON.parse(
+                  await redis.get(`room/default/user/${data.id}/length`),
+                ) + 1
+              await redis
+                .pipeline([
+                  [
+                    'set',
+                    `room/default/user/${data.id}/length`,
+                    JSON.stringify(length),
+                  ],
+                  [
+                    'set',
+                    `room/default/user/${data.id}/${length}`,
+                    JSON.stringify(dataWithTime),
+                  ],
+                ])
+                .exec()
+            } else {
+              const length = 0
+              await redis
+                .pipeline([
+                  [
+                    'set',
+                    'room/default/users',
+                    JSON.stringify(users.concat([data.id])),
+                  ],
+                  [
+                    'set',
+                    `room/default/user/${data.id}/length`,
+                    JSON.stringify(0),
+                  ],
+                  [
+                    'set',
+                    `room/default/user/${data.id}/${length}`,
+                    JSON.stringify(dataWithTime),
+                  ],
+                ])
+                .exec()
+            }
+        }
+      } catch (err) {
+        console.log(err)
       }
     })
 
     scServer.on('connection', (socket: any) => {
-      socket.on('request_history', () => {
-        redis.get('history_length', (err, res) => {
-          if (err) throw err
-          const history_length = JSON.parse(res)
-          redis
-            .pipeline(
-              Array.from({length: history_length}, (v, i) => {
-                return ['get', `history_${i}`]
-              }),
+      socket.on('request_history', async () => {
+        try {
+          const users = JSON.parse(await redis.get('room/default/users'))
+          let history: Operation[] = []
+          for (const user of users) {
+            const userLength = JSON.parse(
+              await redis.get(`room/default/user/${user}/length`),
             )
-            .exec((err, results) => {
-              const history = results.map((result: any) =>
-                JSON.parse(result[1]),
+            const userHistoryRaw = await redis
+              .pipeline(
+                Array.from({length: userLength + 1}, (v, i) => {
+                  return ['get', `room/default/user/${user}/${i}`]
+                }),
               )
-              console.log(
-                `dispatching history for ${socket.id}, total: ${
-                  history.length
-                }`,
-              )
-              socket.emit('dispatch_history', history)
-            })
-        })
+              .exec()
+            const userHistory = userHistoryRaw.map((result: any) =>
+              JSON.parse(result[1]),
+            )
+            history = history.concat(userHistory)
+          }
+          console.log(
+            `dispatching history for ${socket.id}, total: ${history.length}`,
+          )
+          const historyAscending = history.sort((a, b) =>
+            a.timestamp > b.timestamp ? 1 : -1,
+          )
+          socket.emit('dispatch_history', historyAscending)
+        } catch (err) {
+          console.log(err)
+        }
       })
     })
   }
