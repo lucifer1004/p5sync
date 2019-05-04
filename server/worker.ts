@@ -59,79 +59,99 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    redis.set('room/default/users', JSON.stringify([]))
+    redis.set('rooms', JSON.stringify([]))
 
-    const channel = scServer.exchange.subscribe('p5')
-    channel.watch(async (data: Operation) => {
-      try {
-        switch (data.mode) {
-          case 'clear':
-            await redis.set('room/default/users', JSON.stringify([]))
-            return
-          default:
-            const res = await redis.get('room/default/users')
-            const users = JSON.parse(res)
-            const dataWithTime = {...data, timestamp: Date.now()}
-            if (users.find((user: string) => user === data.id)) {
-              const length =
-                JSON.parse(
-                  await redis.get(`room/default/user/${data.id}/length`),
-                ) + 1
-              await redis
-                .pipeline([
-                  [
-                    'set',
-                    `room/default/user/${data.id}/length`,
-                    JSON.stringify(length),
-                  ],
-                  [
-                    'set',
-                    `room/default/user/${data.id}/${length}`,
-                    JSON.stringify(dataWithTime),
-                  ],
-                ])
-                .exec()
-            } else {
-              const length = 0
-              await redis
-                .pipeline([
-                  [
-                    'set',
-                    'room/default/users',
-                    JSON.stringify(users.concat([data.id])),
-                  ],
-                  [
-                    'set',
-                    `room/default/user/${data.id}/length`,
-                    JSON.stringify(0),
-                  ],
-                  [
-                    'set',
-                    `room/default/user/${data.id}/${length}`,
-                    JSON.stringify(dataWithTime),
-                  ],
-                ])
-                .exec()
-            }
-        }
-      } catch (err) {
-        console.log(err)
-      }
-    })
+    // redis.set('room/default/users', JSON.stringify([]))
 
     scServer.on('connection', (socket: any) => {
-      socket.on('request_history', async () => {
+      socket.on('request_history', async (data: any) => {
+        const roomToJoin = data.room || 'default'
         try {
-          const users = JSON.parse(await redis.get('room/default/users'))
+          const rooms = JSON.parse(await redis.get(`rooms`))
+          if (!rooms.find((room: string) => room === roomToJoin)) {
+            await redis
+              .pipeline([
+                ['set', 'rooms', JSON.stringify(rooms.concat(roomToJoin))],
+                ['set', `room/${roomToJoin}/users`, JSON.stringify([])],
+              ])
+              .exec()
+            const channel = scServer.exchange.subscribe(`room/${roomToJoin}`)
+            channel.watch(async (data: Operation) => {
+              try {
+                switch (data.mode) {
+                  case 'clear':
+                    await redis.set(
+                      `room/${roomToJoin}/users`,
+                      JSON.stringify([]),
+                    )
+                    return
+                  default:
+                    const res = await redis.get(`room/${roomToJoin}/users`)
+                    const users = JSON.parse(res)
+                    const dataWithTime = {...data, timestamp: Date.now()}
+                    if (users.find((user: string) => user === data.id)) {
+                      const length =
+                        JSON.parse(
+                          await redis.get(
+                            `room/${roomToJoin}/user/${data.id}/length`,
+                          ),
+                        ) + 1
+                      await redis
+                        .pipeline([
+                          [
+                            'set',
+                            `room/${roomToJoin}/user/${data.id}/length`,
+                            JSON.stringify(length),
+                          ],
+                          [
+                            'set',
+                            `room/${roomToJoin}/user/${data.id}/${length}`,
+                            JSON.stringify(dataWithTime),
+                          ],
+                        ])
+                        .exec()
+                    } else {
+                      const length = 0
+                      await redis
+                        .pipeline([
+                          [
+                            'set',
+                            `room/${roomToJoin}/users`,
+                            JSON.stringify(users.concat([data.id])),
+                          ],
+                          [
+                            'set',
+                            `room/${roomToJoin}/user/${data.id}/length`,
+                            JSON.stringify(0),
+                          ],
+                          [
+                            'set',
+                            `room/${roomToJoin}/user/${data.id}/${length}`,
+                            JSON.stringify(dataWithTime),
+                          ],
+                        ])
+                        .exec()
+                    }
+                }
+              } catch (err) {
+                console.log(err)
+              }
+            })
+          }
+        } catch (err) {
+          console.log(err)
+        }
+        try {
+          const users = JSON.parse(await redis.get(`room/${roomToJoin}/users`))
           let history: Operation[] = []
           for (const user of users) {
             const userLength = JSON.parse(
-              await redis.get(`room/default/user/${user}/length`),
+              await redis.get(`room/${roomToJoin}/user/${user}/length`),
             )
             const userHistoryRaw = await redis
               .pipeline(
                 Array.from({length: userLength + 1}, (v, i) => {
-                  return ['get', `room/default/user/${user}/${i}`]
+                  return ['get', `room/${roomToJoin}/user/${user}/${i}`]
                 }),
               )
               .exec()

@@ -132,17 +132,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const socket = socketCluster.create({port: 8000})
-    const channel = socket.subscribe('p5')
+    const room = 'test'
     socketRef.current = socket
-    channelRef.current = channel
     socket.on('connect', () => {
       if (!boardExistRef.current) {
+        const channel = socket.subscribe(`room/${room}`)
+        channelRef.current = channel
         if (nodeRef.current) new p5(sketch, nodeRef.current)
         console.log('connected to server')
         boardExistRef.current = true
       } else console.log('reconnected to server')
 
-      socket.emit('request_history')
+      socket.emit('request_history', {room: room})
     })
   }, [])
 
