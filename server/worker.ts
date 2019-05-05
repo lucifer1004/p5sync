@@ -45,7 +45,10 @@ class MySCWorker extends SCWorker {
 
     const httpServer = this.httpServer
     const scServer = this.scServer
-    const redis = new Redis()
+    const redis = new Redis({
+      port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+      host: process.env.REDIS_HOST || '127.0.0.1',
+    })
 
     if (environment === 'dev') {
       // Log every HTTP request. See https://github.com/expressjs/morgan for other
