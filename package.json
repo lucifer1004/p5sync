@@ -9,6 +9,9 @@
     "start:react": "cd react && yarn start",
     "start:vanilla": "cd vanilla && yarn start",
     "start:vue": "cd vue && yarn start",
+    "run:server": "cd server && pm2 start ecosystem.config.js",
+    "stop:server": "pm2 stop p5sync",
+    "delete:server": "pm2 delete p5sync",
     "format": "prettier --write '{server,react/src,vanilla,vue/src}/**/*.{js,jsx,ts,tsx,json,vue}'"
   },
   "workspaces": [
