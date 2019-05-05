@@ -23,11 +23,11 @@ interface Line {
 }
 
 interface Operation {
+  room?: string
   id: string
   mode: 'clear' | 'pencil' | 'rubber'
   lines?: Line[]
   circles?: Circle[]
-  timestamp?: Date
 }
 
 class MySCWorker extends SCWorker {
@@ -59,114 +59,48 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    redis.set('rooms', JSON.stringify([]))
-
-    // redis.set('room/default/users', JSON.stringify([]))
-
     scServer.on('connection', (socket: any) => {
-      socket.on('request_history', async (data: any) => {
-        const roomToJoin = data.room || 'default'
+      socket.on('draw', async (data: Operation) => {
         try {
-          const rooms = JSON.parse(await redis.get(`rooms`))
-          if (!rooms.find((room: string) => room === roomToJoin)) {
-            await redis
-              .pipeline([
-                ['set', 'rooms', JSON.stringify(rooms.concat(roomToJoin))],
-                ['set', `room/${roomToJoin}/users`, JSON.stringify([])],
-              ])
-              .exec()
-            const channel = scServer.exchange.subscribe(`room/${roomToJoin}`)
-            channel.watch(async (data: Operation) => {
-              try {
-                switch (data.mode) {
-                  case 'clear':
-                    await redis.set(
-                      `room/${roomToJoin}/users`,
-                      JSON.stringify([]),
-                    )
-                    return
-                  default:
-                    const res = await redis.get(`room/${roomToJoin}/users`)
-                    const users = JSON.parse(res)
-                    const dataWithTime = {...data, timestamp: Date.now()}
-                    if (users.find((user: string) => user === data.id)) {
-                      const length =
-                        JSON.parse(
-                          await redis.get(
-                            `room/${roomToJoin}/user/${data.id}/length`,
-                          ),
-                        ) + 1
-                      await redis
-                        .pipeline([
-                          [
-                            'set',
-                            `room/${roomToJoin}/user/${data.id}/length`,
-                            JSON.stringify(length),
-                          ],
-                          [
-                            'set',
-                            `room/${roomToJoin}/user/${data.id}/${length}`,
-                            JSON.stringify(dataWithTime),
-                          ],
-                        ])
-                        .exec()
-                    } else {
-                      const length = 0
-                      await redis
-                        .pipeline([
-                          [
-                            'set',
-                            `room/${roomToJoin}/users`,
-                            JSON.stringify(users.concat([data.id])),
-                          ],
-                          [
-                            'set',
-                            `room/${roomToJoin}/user/${data.id}/length`,
-                            JSON.stringify(0),
-                          ],
-                          [
-                            'set',
-                            `room/${roomToJoin}/user/${data.id}/${length}`,
-                            JSON.stringify(dataWithTime),
-                          ],
-                        ])
-                        .exec()
-                    }
-                }
-              } catch (err) {
-                console.log(err)
-              }
-            })
+          const room = data.room || 'default'
+          const roomKey = `rooms/${room}`
+          scServer.exchange.publish(roomKey, data)
+
+          switch (data.mode) {
+            // Handle clear
+            case 'clear':
+              await redis.del(roomKey)
+              return
+
+            // Handle other operations
+            default:
+              await redis.rpush(roomKey, JSON.stringify(data))
           }
         } catch (err) {
           console.log(err)
         }
+      })
+
+      socket.on('request_history', async (data: any) => {
         try {
-          const users = JSON.parse(await redis.get(`room/${roomToJoin}/users`))
-          let history: Operation[] = []
-          for (const user of users) {
-            const userLength = JSON.parse(
-              await redis.get(`room/${roomToJoin}/user/${user}/length`),
-            )
-            const userHistoryRaw = await redis
-              .pipeline(
-                Array.from({length: userLength + 1}, (v, i) => {
-                  return ['get', `room/${roomToJoin}/user/${user}/${i}`]
-                }),
-              )
-              .exec()
-            const userHistory = userHistoryRaw.map((result: any) =>
-              JSON.parse(result[1]),
-            )
-            history = history.concat(userHistory)
+          const room = data.room || 'default'
+          const roomKey = `rooms/${room}`
+
+          // Create a new room if room does not exist
+          if ((await redis.sismember('rooms', room)) === 0) {
+            await redis.sadd(room)
           }
+
+          const rawHistory = await redis.lrange(roomKey, 0, -1)
+          const history = rawHistory.map((rawOperation: string) =>
+            JSON.parse(rawOperation),
+          )
+
           console.log(
             `dispatching history for ${socket.id}, total: ${history.length}`,
           )
-          const historyAscending = history.sort((a, b) =>
-            a.timestamp > b.timestamp ? 1 : -1,
-          )
-          socket.emit('dispatch_history', historyAscending)
+
+          socket.emit('dispatch_history', history)
         } catch (err) {
           console.log(err)
         }

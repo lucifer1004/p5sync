@@ -39,6 +39,12 @@ const applyClear = (p: p5) => {
 
 export default Vue.extend({
   name: 'HelloWorld',
+  props: {
+    room: {
+      type: String,
+      default: 'default',
+    }
+  },
   data() {
     return {
       id: Math.random()
@@ -60,7 +66,7 @@ export default Vue.extend({
     },
     useClear() {
       applyClear(this.p)
-      this.channel.publish({id: this.id, mode: 'clear'})
+      this.socket.emit('draw', {room: this.room, id: this.id, mode: 'clear'})
     },
     sketch(p: p5) {
       let lines: Line[] = []
@@ -92,7 +98,6 @@ export default Vue.extend({
         })
 
         this.socket.on('dispatch_history', (data: any) => {
-          console.log(data)
           data.forEach((op: any) => {
             switch (op.mode) {
               case 'pencil':
@@ -106,6 +111,8 @@ export default Vue.extend({
             }
           })
         })
+
+        this.socket.emit('request_history', {room: this.room})
       }
 
       p.draw = () => {
@@ -124,7 +131,7 @@ export default Vue.extend({
                 },
               })
             } else if (lines.length > 0) {
-              this.channel.publish({id: this.id, lines, mode: this.mode})
+              this.socket.emit('draw', {room: this.room, id: this.id, lines, mode: this.mode})
               lines = []
             }
             return
@@ -144,7 +151,7 @@ export default Vue.extend({
                 radius: 100,
               })
             } else if (circles.length > 0) {
-              this.channel.publish({id: this.id, circles, mode: this.mode})
+              this.socket.emit('draw', {room: this.room, id: this.id, circles, mode: this.mode})
               circles = []
             }
             return
@@ -156,7 +163,7 @@ export default Vue.extend({
   },
   mounted() {
     this.socket = socketCluster.create({port: 8000})
-    this.channel = this.socket.subscribe('p5')
+    this.channel = this.socket.subscribe(`rooms/${this.room}`)
     this.socket.on('connect', () => {
       if (!this.boardExist) {
         new p5(
@@ -165,9 +172,10 @@ export default Vue.extend({
         )
         console.log('connected to server')
         this.boardExist = true
-      } else console.log('reconnected to server')
-
-      this.socket.emit('request_history')
+      } else {
+        console.log('reconnected to server')
+        this.socket.emit('request_history', {room: this.room})
+      }
     })
   },
 })

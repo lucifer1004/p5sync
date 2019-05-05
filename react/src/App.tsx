@@ -4,6 +4,10 @@ import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
 import {Point, Line, Circle} from './interfaces'
 
+interface AppProps {
+  room?: string
+}
+
 const applyPencil = (p: p5, data: any) => {
   data.lines.forEach((line: Line) =>
     p.line(line.start.x, line.start.y, line.end.x, line.end.y),
@@ -26,7 +30,7 @@ const applyClear = (p: p5) => {
   p.rect(0, 0, 1280, 720)
 }
 
-const App: React.FC = () => {
+const App = ({room = 'default'}: AppProps) => {
   const [id] = useState(
     Math.random()
       .toString(16)
@@ -81,6 +85,8 @@ const App: React.FC = () => {
           }
         })
       })
+
+      socketRef.current.emit('request_history', {room})
     }
 
     p.draw = () => {
@@ -100,7 +106,12 @@ const App: React.FC = () => {
               },
             })
           } else if (lines.length > 0) {
-            channelRef.current.publish({id, lines, mode: modeRef.current})
+            socketRef.current.emit('draw', {
+              room,
+              id,
+              lines,
+              mode: modeRef.current,
+            })
             lines = []
           }
           return
@@ -120,7 +131,12 @@ const App: React.FC = () => {
               radius: 100,
             })
           } else if (circles.length > 0) {
-            channelRef.current.publish({id, circles, mode: modeRef.current})
+            socketRef.current.emit('draw', {
+              room,
+              id,
+              circles,
+              mode: modeRef.current,
+            })
             circles = []
           }
           return
@@ -132,18 +148,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const socket = socketCluster.create({port: 8000})
-    const room = 'test'
     socketRef.current = socket
     socket.on('connect', () => {
       if (!boardExistRef.current) {
-        const channel = socket.subscribe(`room/${room}`)
+        const channel = socket.subscribe(`rooms/${room}`)
         channelRef.current = channel
         if (nodeRef.current) new p5(sketch, nodeRef.current)
         console.log('connected to server')
         boardExistRef.current = true
-      } else console.log('reconnected to server')
-
-      socket.emit('request_history', {room: room})
+      } else {
+        console.log('reconnected to server')
+        socket.emit('request_history', {room})
+      }
     })
   }, [])
 
@@ -167,7 +183,7 @@ const App: React.FC = () => {
       <button
         onClick={() => {
           applyClear(pRef.current)
-          channelRef.current.publish({id, mode: 'clear'})
+          socketRef.current.emit('draw', {room, id, mode: 'clear'})
         }}
       >
         Clear

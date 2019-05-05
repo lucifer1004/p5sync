@@ -69,10 +69,7 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
       })
     })
 
-    socket.on('clear', () => {
-      p.clear()
-      p.rect(0, 0, 1280, 720)
-    })
+    socket.emit('request_history', {room})
   }
 
   p.draw = () => {
@@ -91,7 +88,7 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
             },
           })
         } else if (lines.length > 0) {
-          channel.publish({id, lines, mode})
+          socket.emit('draw', {room, id, lines, mode})
           lines = []
         }
         return
@@ -111,7 +108,7 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
             radius: 100,
           })
         } else if (circles.length > 0) {
-          channel.publish({id, circles, mode})
+          socket.emit('draw', {room, id, circles, mode})
           circles = []
         }
         return
@@ -123,8 +120,9 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
 
 let boardExist = false
 const node = document.getElementById('board')
+const room = 'default'
 const socket = socketCluster.create({port: 8000})
-const channel = socket.subscribe('p5')
+const channel = socket.subscribe(`rooms/${room}`)
 const id = Math.random()
   .toString(16)
   .substr(2, 8)
@@ -142,7 +140,7 @@ rubber.onclick = () => {
 const clear = document.getElementById('clear')
 clear.onclick = () => {
   applyClear(pRef.current)
-  channel.publish({id, mode: 'clear'})
+  socket.emit('draw', {room, id, mode: 'clear'})
 }
 
 socket.on('connect', () => {
@@ -150,7 +148,8 @@ socket.on('connect', () => {
     new p5(sketch(id, channel, socket), node)
     console.log('connected to server')
     boardExist = true
-  } else console.log('reconnected to server')
-
-  socket.emit('request_history')
+  } else {
+    console.log('reconnected to server')
+    socket.emit('request_history', {room})
+  }
 })
