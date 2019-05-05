@@ -37,7 +37,7 @@ class MySCWorker extends SCWorker {
 
     const app = express()
     const corsOptions = {
-      origin: ['http://localhost:3000', 'http://localhost:1234'],
+      origin: ['http://localhost:*'],
       credentials: true,
       optionsSuccessStatus: 200, // some legacy browsers (IE11, constious SmartTVs) choke on 204
     }
@@ -60,6 +60,7 @@ class MySCWorker extends SCWorker {
     httpServer.on('request', app)
 
     scServer.on('connection', (socket: any) => {
+      console.log(`${socket.id} connected to ${process.pid}`)
       socket.on('draw', async (data: Operation) => {
         try {
           const room = data.room || 'default'
