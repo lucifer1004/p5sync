@@ -68,6 +68,8 @@ class MySCWorker extends SCWorker {
         try {
           const room = data.room || 'default'
           const roomKey = `rooms/${room}`
+          const stringifiedData = JSON.stringify(data)
+          if (stringifiedData.match('null')) return
           scServer.exchange.publish(roomKey, data)
 
           switch (data.mode) {
@@ -78,8 +80,6 @@ class MySCWorker extends SCWorker {
 
             // Handle other operations
             default:
-              const stringifiedData = JSON.stringify(data)
-              if (stringifiedData.match('null')) return
               await redis.rpush(roomKey, JSON.stringify(data))
           }
         } catch (err) {
