@@ -1,14 +1,17 @@
 import React, {useEffect, useRef, useState} from 'react'
-import socketCluster from 'socketcluster-client'
+import socketCluster, {SCClientSocket} from 'socketcluster-client'
 import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
 import {Point, Line, Circle} from './interfaces'
+import {SCChannel} from 'sc-channel'
 
 interface AppProps {
   room?: string
 }
 
+// Tool functions
 const applyPencil = (p: p5, data: any) => {
+  data.color && p.stroke(data.color)
   data.lines.forEach((line: Line) =>
     p.line(line.start.x, line.start.y, line.end.x, line.end.y),
   )
@@ -22,26 +25,31 @@ const applyRubber = (p: p5, data: any) => {
   })
   p.noFill()
   p.strokeWeight(2)
-  p.rect(0, 0, 1280, 720)
 }
 
 const applyClear = (p: p5) => {
   p.clear()
-  p.rect(0, 0, 1280, 720)
 }
 
 const App = ({room = 'default'}: AppProps) => {
+  // States
   const [id] = useState(
     Math.random()
       .toString(16)
       .substr(2, 8),
   )
+
+  // Refs
   const boardExistRef = useRef<boolean>(false)
   const modeRef = useRef<string>('pencil')
-  const channelRef = useRef<any>(null)
-  const socketRef = useRef<any>(null)
-  const nodeRef = useRef<HTMLDivElement>(null)
+  const color = useRef<string>('blue')
+  const rubberRadius = useRef<number>(100)
+  const channelRef = useRef<SCChannel | null>(null)
+  const socketRef = useRef<SCClientSocket | null>(null)
+  const nodeRef = useRef<HTMLDivElement | null>(null)
   const pRef = useRef<any>(null)
+
+  // Sketch function for p5
   const sketch = (p: p5) => {
     let lines: Line[] = []
     let circles: Circle[] = []
@@ -49,53 +57,57 @@ const App = ({room = 'default'}: AppProps) => {
     p.setup = () => {
       pRef.current = p
       p.createCanvas(1280, 720)
-      p.stroke(0)
+      p.stroke(color.current)
       p.strokeWeight(2)
       p.frameRate(60)
       p.noFill()
-      p.rect(0, 0, 1280, 720)
-      channelRef.current.watch((data: any) => {
-        if (data.id === id) return
-        switch (data.mode) {
-          case 'pencil':
-            applyPencil(p, data)
-            return
-          case 'rubber':
-            applyRubber(p, data)
-            return
-          case 'clear':
-            applyClear(p)
-            return
-          default:
-            return
-        }
-      })
-
-      socketRef.current.on('dispatch_history', (data: any) => {
-        data.forEach((op: any) => {
-          switch (op.mode) {
+      channelRef.current &&
+        channelRef.current.watch((data: any) => {
+          if (data.id === id) return
+          switch (data.mode) {
             case 'pencil':
-              applyPencil(p, op)
+              applyPencil(p, data)
               return
             case 'rubber':
-              applyRubber(p, op)
+              applyRubber(p, data)
+              return
+            case 'clear':
+              applyClear(p)
               return
             default:
               return
           }
         })
-      })
 
-      socketRef.current.emit('request_history', {room})
+      socketRef.current &&
+        socketRef.current.on('dispatch_history', (data: any) => {
+          data.forEach((op: any) => {
+            switch (op.mode) {
+              case 'pencil':
+                applyPencil(p, op)
+                return
+              case 'rubber':
+                applyRubber(p, op)
+                return
+              default:
+                return
+            }
+          })
+        })
+
+      socketRef.current && socketRef.current.emit('request_history', {room})
     }
 
     p.draw = () => {
       switch (modeRef.current) {
         case 'pencil':
           if (p.mouseIsPressed === true) {
-            if (!Point.validate(new Point(p.mouseX, p.mouseY))) return
-            p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
-            lines.push({
+            if (
+              !Point.validate(new Point(p.mouseX, p.mouseY)) ||
+              !Point.validate(new Point(p.pmouseX, p.pmouseY))
+            )
+              return
+            const line = {
               end: {
                 x: p.mouseX,
                 y: p.mouseY,
@@ -104,39 +116,40 @@ const App = ({room = 'default'}: AppProps) => {
                 x: p.pmouseX,
                 y: p.pmouseY,
               },
-            })
+            }
+            applyPencil(p, {lines: [line], color: color.current})
+            lines.push(line)
           } else if (lines.length > 0) {
-            socketRef.current.emit('draw', {
-              room,
-              id,
-              lines,
-              mode: modeRef.current,
-            })
+            socketRef.current &&
+              socketRef.current.emit('draw', {
+                room,
+                id,
+                lines,
+                color: color.current,
+                mode: modeRef.current,
+              })
             lines = []
           }
           return
         case 'rubber':
           if (p.mouseIsPressed === true) {
-            p.fill(255)
-            p.strokeWeight(0)
-            p.circle(p.mouseX, p.mouseY, 100)
-            p.noFill()
-            p.strokeWeight(2)
-            p.rect(0, 0, 1280, 720)
-            circles.push({
+            const circle = {
               center: {
                 x: p.mouseX,
                 y: p.mouseY,
               },
-              radius: 100,
-            })
+              radius: rubberRadius.current,
+            }
+            applyRubber(p, {circles: [circle]})
+            circles.push(circle)
           } else if (circles.length > 0) {
-            socketRef.current.emit('draw', {
-              room,
-              id,
-              circles,
-              mode: modeRef.current,
-            })
+            socketRef.current &&
+              socketRef.current.emit('draw', {
+                room,
+                id,
+                circles,
+                mode: modeRef.current,
+              })
             circles = []
           }
           return
@@ -176,6 +189,9 @@ const App = ({room = 'default'}: AppProps) => {
       <button
         onClick={() => {
           modeRef.current = 'pencil'
+          color.current = `#${Math.random()
+            .toString(16)
+            .substr(2, 6)}`
         }}
       >
         Pencil
@@ -183,7 +199,8 @@ const App = ({room = 'default'}: AppProps) => {
       <button
         onClick={() => {
           applyClear(pRef.current)
-          socketRef.current.emit('draw', {room, id, mode: 'clear'})
+          socketRef.current &&
+            socketRef.current.emit('draw', {room, id, mode: 'clear'})
         }}
       >
         Clear

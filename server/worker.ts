@@ -26,8 +26,13 @@ interface Operation {
   room?: string
   id: string
   mode: 'clear' | 'pencil' | 'rubber'
+  color?: string
   lines?: Line[]
   circles?: Circle[]
+}
+
+interface HistoryRequest {
+  room?: string
 }
 
 class MySCWorker extends SCWorker {
@@ -64,15 +69,15 @@ class MySCWorker extends SCWorker {
 
     scServer.on('connection', (socket: any) => {
       console.log(`${socket.id} connected to ${process.pid}`)
-      socket.on('draw', async (data: Operation) => {
+      socket.on('draw', async (op: Operation) => {
         try {
-          const room = data.room || 'default'
+          const room = op.room || 'default'
           const roomKey = `rooms/${room}`
-          const stringifiedData = JSON.stringify(data)
+          const stringifiedData = JSON.stringify(op)
           if (stringifiedData.match('null')) return
-          scServer.exchange.publish(roomKey, data)
+          scServer.exchange.publish(roomKey, op)
 
-          switch (data.mode) {
+          switch (op.mode) {
             // Handle clear
             case 'clear':
               await redis.del(roomKey)
@@ -80,16 +85,16 @@ class MySCWorker extends SCWorker {
 
             // Handle other operations
             default:
-              await redis.rpush(roomKey, JSON.stringify(data))
+              await redis.rpush(roomKey, JSON.stringify(op))
           }
         } catch (err) {
           console.log(err)
         }
       })
 
-      socket.on('request_history', async (data: any) => {
+      socket.on('request_history', async (req: HistoryRequest) => {
         try {
-          const room = data.room || 'default'
+          const room = req.room || 'default'
           const roomKey = `rooms/${room}`
 
           // Create a new room if room does not exist

@@ -3,7 +3,21 @@ import 'p5/lib/addons/p5.dom'
 import socketCluster from 'socketcluster-client'
 import {Line, Circle} from './interfaces'
 
+const node = document.getElementById('board')
+const room = 'default'
+const socket = socketCluster.create({port: 8000})
+const channel = socket.subscribe(`rooms/${room}`)
+const id = Math.random()
+  .toString(16)
+  .substr(2, 8)
+const pRef = {current: null}
+let boardExist = false
+let mode = 'pencil'
+let color = 'blue'
+let rubberRadius = 100
+
 const applyPencil = (p: p5, data: any) => {
+  data.color && p.stroke(data.color)
   data.lines.forEach((line: Line) =>
     p.line(line.start.x, line.start.y, line.end.x, line.end.y),
   )
@@ -17,12 +31,10 @@ const applyRubber = (p: p5, data: any) => {
   })
   p.noFill()
   p.strokeWeight(2)
-  p.rect(0, 0, 1280, 720)
 }
 
 const applyClear = (p: p5) => {
   p.clear()
-  p.rect(0, 0, 1280, 720)
 }
 
 const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
@@ -32,11 +44,10 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
   p.setup = () => {
     pRef.current = p
     p.createCanvas(1280, 720)
-    p.stroke(0)
+    p.stroke(color)
     p.strokeWeight(2)
     p.frameRate(60)
     p.noFill()
-    p.rect(0, 0, 1280, 720)
     channel.watch((data: any) => {
       if (data.id === id) return
       switch (data.mode) {
@@ -77,7 +88,7 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
       case 'pencil':
         if (p.mouseIsPressed === true) {
           p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
-          lines.push({
+          const line = {
             end: {
               x: p.mouseX,
               y: p.mouseY,
@@ -86,27 +97,25 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
               x: p.pmouseX,
               y: p.pmouseY,
             },
-          })
+          }
+          applyPencil(p, {lines: [line], color})
+          lines.push(line)
         } else if (lines.length > 0) {
-          socket.emit('draw', {room, id, lines, mode})
+          socket.emit('draw', {room, id, lines, color, mode})
           lines = []
         }
         return
       case 'rubber':
         if (p.mouseIsPressed === true) {
-          p.fill(255)
-          p.strokeWeight(0)
-          p.circle(p.mouseX, p.mouseY, 100)
-          p.noFill()
-          p.strokeWeight(2)
-          p.rect(0, 0, 1280, 720)
-          circles.push({
+          const circle = {
             center: {
               x: p.mouseX,
               y: p.mouseY,
             },
-            radius: 100,
-          })
+            radius: rubberRadius,
+          }
+          applyRubber(p, {circles: [circle]})
+          circles.push(circle)
         } else if (circles.length > 0) {
           socket.emit('draw', {room, id, circles, mode})
           circles = []
@@ -118,20 +127,12 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
   }
 }
 
-let boardExist = false
-const node = document.getElementById('board')
-const room = 'default'
-const socket = socketCluster.create({port: 8000})
-const channel = socket.subscribe(`rooms/${room}`)
-const id = Math.random()
-  .toString(16)
-  .substr(2, 8)
-let mode = 'pencil'
-const pRef = {current: null}
-
 const pencil = document.getElementById('pencil')
 pencil.onclick = () => {
   mode = 'pencil'
+  color = `#${Math.random()
+    .toString(16)
+    .substr(2, 6)}`
 }
 const rubber = document.getElementById('rubber')
 rubber.onclick = () => {

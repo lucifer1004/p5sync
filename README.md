@@ -9,6 +9,8 @@
 ## Functions
 
 - Pencil
+  - Color
 - Rubber
+  - Radius
 - Clear
 - Room

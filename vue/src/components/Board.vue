@@ -16,6 +16,7 @@ import socketCluster from 'socketcluster-client'
 import {Line, Circle} from '@/interfaces'
 
 const applyPencil = (p: p5, data: any) => {
+  data.color && p.stroke(data.color)
   data.lines.forEach((line: Line) =>
     p.line(line.start.x, line.start.y, line.end.x, line.end.y),
   )
@@ -29,21 +30,19 @@ const applyRubber = (p: p5, data: any) => {
   })
   p.noFill()
   p.strokeWeight(2)
-  p.rect(0, 0, 1280, 720)
 }
 
 const applyClear = (p: p5) => {
   p.clear()
-  p.rect(0, 0, 1280, 720)
 }
 
 export default Vue.extend({
-  name: 'HelloWorld',
+  name: 'Board',
   props: {
     room: {
       type: String,
       default: 'default',
-    }
+    },
   },
   data() {
     return {
@@ -51,6 +50,8 @@ export default Vue.extend({
         .toString(16)
         .substr(2, 8),
       boardExist: false,
+      color: 'blue',
+      rubberRadius: 100,
       mode: 'pencil',
       socket: null,
       channel: null,
@@ -60,6 +61,9 @@ export default Vue.extend({
   methods: {
     usePencil() {
       this.mode = 'pencil'
+      this.color = `#${Math.random()
+        .toString(16)
+        .substr(2, 6)}`
     },
     useRubber() {
       this.mode = 'rubber'
@@ -79,7 +83,6 @@ export default Vue.extend({
         p.strokeWeight(2)
         p.frameRate(60)
         p.noFill()
-        p.rect(0, 0, 1280, 720)
         this.channel.watch((data: any) => {
           if (data.id === this.id) return
           switch (data.mode) {
@@ -120,7 +123,7 @@ export default Vue.extend({
           case 'pencil':
             if (p.mouseIsPressed === true) {
               p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
-              lines.push({
+              const line = {
                 end: {
                   x: p.mouseX,
                   y: p.mouseY,
@@ -129,29 +132,38 @@ export default Vue.extend({
                   x: p.pmouseX,
                   y: p.pmouseY,
                 },
-              })
+              }
+              applyPencil(p, {lines: [line], color: this.color})
+              lines.push(line)
             } else if (lines.length > 0) {
-              this.socket.emit('draw', {room: this.room, id: this.id, lines, mode: this.mode})
+              this.socket.emit('draw', {
+                room: this.room,
+                id: this.id,
+                lines,
+                color: this.color,
+                mode: this.mode,
+              })
               lines = []
             }
             return
           case 'rubber':
             if (p.mouseIsPressed === true) {
-              p.fill(255)
-              p.strokeWeight(0)
-              p.circle(p.mouseX, p.mouseY, 100)
-              p.noFill()
-              p.strokeWeight(2)
-              p.rect(0, 0, 1280, 720)
-              circles.push({
+              const circle = {
                 center: {
                   x: p.mouseX,
                   y: p.mouseY,
                 },
-                radius: 100,
-              })
+                radius: this.rubberRadius,
+              }
+              applyRubber(p, {circles: [circle]})
+              circles.push(circle)
             } else if (circles.length > 0) {
-              this.socket.emit('draw', {room: this.room, id: this.id, circles, mode: this.mode})
+              this.socket.emit('draw', {
+                room: this.room,
+                id: this.id,
+                circles,
+                mode: this.mode,
+              })
               circles = []
             }
             return
@@ -166,10 +178,7 @@ export default Vue.extend({
     this.channel = this.socket.subscribe(`rooms/${this.room}`)
     this.socket.on('connect', () => {
       if (!this.boardExist) {
-        new p5(
-          this.sketch,
-          this.$refs.board,
-        )
+        new p5(this.sketch, this.$refs.board)
         console.log('connected to server')
         this.boardExist = true
       } else {
