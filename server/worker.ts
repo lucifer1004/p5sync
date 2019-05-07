@@ -92,7 +92,7 @@ class MySCWorker extends SCWorker {
 
           // Create a new room if room does not exist
           if ((await redis.sismember('rooms', room)) === 0) {
-            await redis.sadd(room)
+            await redis.sadd('rooms', [room])
           }
 
           const rawHistory = await redis.lrange(roomKey, 0, -1)
