@@ -78,6 +78,8 @@ class MySCWorker extends SCWorker {
 
             // Handle other operations
             default:
+              const stringifiedData = JSON.stringify(data)
+              if (stringifiedData.match('null')) return
               await redis.rpush(roomKey, JSON.stringify(data))
           }
         } catch (err) {
