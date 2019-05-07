@@ -1,4 +1,5 @@
 import cors from 'cors'
+import APM from 'elastic-apm-node'
 import express from 'express'
 import Redis from 'ioredis'
 import morgan from 'morgan'
@@ -6,6 +7,7 @@ import path from 'path'
 import healthChecker from 'sc-framework-health-check'
 import serveStatic from 'serve-static'
 import SCWorker from 'socketcluster/scworker'
+import {SCServerSocket} from 'socketcluster-server'
 
 interface Point {
   x: number
@@ -40,9 +42,10 @@ class MySCWorker extends SCWorker {
     console.log('   >> Worker PID:', process.pid)
     const environment = this.options.environment
 
+    const apm = APM.start()
     const app = express()
     const corsOptions = {
-      origin: ['http://localhost:*'],
+      origin: ['*'],
       credentials: true,
       optionsSuccessStatus: 200, // some legacy browsers (IE11, constious SmartTVs) choke on 204
     }
@@ -67,13 +70,14 @@ class MySCWorker extends SCWorker {
 
     httpServer.on('request', app)
 
-    scServer.on('connection', (socket: any) => {
+    scServer.on('connection', (socket: SCServerSocket) => {
       console.log(`${socket.id} connected to ${process.pid}`)
       socket.on('draw', async (op: Operation) => {
         try {
           const room = op.room || 'default'
           const roomKey = `rooms/${room}`
           const stringifiedData = JSON.stringify(op)
+          const trans = apm.startTransaction(`PUBLISH_DRAWING:${room}`)
           if (stringifiedData.match('null')) return
           scServer.exchange.publish(roomKey, op)
 
@@ -87,8 +91,10 @@ class MySCWorker extends SCWorker {
             default:
               await redis.rpush(roomKey, JSON.stringify(op))
           }
+          trans.result = `Drawing successfully published to ${room} and saved to Redis`
+          trans.end()
         } catch (err) {
-          console.log(err)
+          apm.captureError(err)
         }
       })
 
@@ -96,6 +102,7 @@ class MySCWorker extends SCWorker {
         try {
           const room = req.room || 'default'
           const roomKey = `rooms/${room}`
+          const trans = apm.startTransaction(`DISPATH_HISTORY:${room}`)
 
           // Create a new room if room does not exist
           if ((await redis.sismember('rooms', room)) === 0) {
@@ -112,11 +119,18 @@ class MySCWorker extends SCWorker {
           )
 
           socket.emit('dispatch_history', history)
+
+          trans.result = `History successfully dispatched to ${socket.id}`
+          trans.end()
         } catch (err) {
-          console.log(err)
+          apm.captureError(err)
         }
       })
     })
+
+    // scServer.on('disconnection', (socket: SCServerSocket) => {
+    //   trans.end()
+    // })
   }
 }
 

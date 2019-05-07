@@ -8,15 +8,15 @@ module.exports = {
       watch: true,
       max_memory_restart: '1G',
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'dev',
       },
       env_mac: {
-        NODE_ENV: 'production',
+        NODE_ENV: 'prod',
         REDIS_PORT: 6379,
         REDIS_HOST: 'docker.for.mac.localhost',
       },
       env_production: {
-        NODE_ENV: 'production',
+        NODE_ENV: 'prod',
         REDIS_PORT: 6379,
         REDIS_HOST: '127.0.0.1',
       },

@@ -22,7 +22,7 @@ const brokerControllerPath =
   argv.bc || process.env.SOCKETCLUSTER_BROKER_CONTROLLER
 const workerClusterControllerPath =
   argv.wcc || process.env.SOCKETCLUSTER_WORKERCLUSTER_CONTROLLER
-const environment = process.env.ENV || 'dev'
+const environment = process.env.NODE_ENV || 'dev'
 
 const options = {
   workers: Number(argv.w) || Number(process.env.SOCKETCLUSTER_WORKERS) || 3,
