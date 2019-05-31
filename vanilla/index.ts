@@ -1,7 +1,7 @@
 import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
 import socketCluster from 'socketcluster-client'
-import {Line, Circle} from './interfaces'
+import {Point, Line, Circle} from './interfaces'
 
 const node = document.getElementById('board')
 const room = 'default'
@@ -16,11 +16,40 @@ let mode = 'pencil'
 let color = 'blue'
 let rubberRadius = 100
 
+const dist = (a: Point, b: Point): number => {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+}
+
+const calculateControlPoint = (a: Point, b: Point, k: number) => {
+  return {
+    x: a.x + k * (b.x - a.x),
+    y: a.y + k * (b.y - a.y),
+  }
+}
+
 const applyPencil = (p: p5, data: any) => {
   data.color && p.stroke(data.color)
-  data.lines.forEach((line: Line) =>
-    p.line(line.start.x, line.start.y, line.end.x, line.end.y),
-  )
+  if (data.lines.length === 1) {
+    const line = data.lines[0]
+    p.line(line.start.x, line.start.y, line.end.x, line.end.y)
+  } else {
+    const k = 0.3
+    let a = data.lines[0].start
+    let b = data.lines[0].end
+    let a1 = calculateControlPoint(a, b, 1 - k)
+    let b1, b2
+    p.line(a.x, a.y, a1.x, a1.y)
+    for (let i = 1; i < data.lines.length; i++) {
+      let c = data.lines[i].end
+      b1 = calculateControlPoint(b, c, k)
+      b2 = calculateControlPoint(b, c, 1 - k)
+      p.bezier(a1.x, a1.y, b.x, b.y, b.x, b.y, b1.x, b1.y)
+      p.line(b1.x, b1.y, b2.x, b2.y)
+      a = b
+      b = c
+      a1 = b2
+    }
+  }
 }
 
 const applyRubber = (p: p5, data: any) => {
@@ -31,6 +60,11 @@ const applyRubber = (p: p5, data: any) => {
   })
   p.noFill()
   p.strokeWeight(2)
+
+  /** Implementing a transparent rubber */
+  // data.circles.forEach((circle: Circle) => {
+  //   (p as any).drawingContext.clearRect(circle.center.x - circle.radius / 2, circle.center.y - circle.radius / 2, circle.radius, circle.radius)
+  // })
 }
 
 const applyClear = (p: p5) => {
@@ -40,6 +74,8 @@ const applyClear = (p: p5) => {
 const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
   let lines: Line[] = []
   let circles: Circle[] = []
+  let lastX, lastY: number
+  let isDrawing: boolean = false
 
   p.setup = () => {
     pRef.current = p
@@ -87,22 +123,34 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
     switch (mode) {
       case 'pencil':
         if (p.mouseIsPressed === true) {
-          p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
-          const line = {
-            end: {
-              x: p.mouseX,
-              y: p.mouseY,
-            },
-            start: {
-              x: p.pmouseX,
-              y: p.pmouseY,
-            },
+          if (!isDrawing) {
+            isDrawing = true
+            lastX = p.mouseX
+            lastY = p.mouseY
           }
-          applyPencil(p, {lines: [line], color})
-          lines.push(line)
-        } else if (lines.length > 0) {
-          socket.emit('draw', {room, id, lines, color, mode})
-          lines = []
+          if (dist({x: lastX, y: lastY}, {x: p.mouseX, y: p.mouseY}) > 10) {
+            p.line(lastX, lastY, p.mouseX, p.mouseY)
+            const line = {
+              end: {
+                x: p.mouseX,
+                y: p.mouseY,
+              },
+              start: {
+                x: lastX,
+                y: lastY,
+              },
+            }
+            lastX = p.mouseX
+            lastY = p.mouseY
+            applyPencil(p, {lines: [line], color})
+            lines.push(line)
+          }
+        } else {
+          isDrawing = false
+          if (lines.length > 0) {
+            socket.emit('draw', {room, id, lines, color, mode})
+            lines = []
+          }
         }
         return
       case 'rubber':

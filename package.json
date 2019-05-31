@@ -12,7 +12,7 @@
     "run:server": "cd server && pm2 start ecosystem.config.js",
     "stop:server": "pm2 stop p5sync",
     "delete:server": "pm2 delete p5sync",
-    "format": "prettier --write '{server,react/src,vanilla,vue/src}/**/*.{js,jsx,ts,tsx,json,vue}'"
+    "format": "prettier --write '{server,react/src,vanilla,vue/src}/**/*.{js,jsx,ts,tsx,vue}'"
   },
   "workspaces": [
     "server",
@@ -21,11 +21,11 @@
     "vue"
   ],
   "devDependencies": {
-    "husky": "^2.2.0",
-    "lint-staged": "^8.1.6",
-    "nodemon": "^1.19.0",
-    "prettier": "^1.17.0",
-    "ts-node": "^8.1.0"
+    "husky": "^2.3.0",
+    "lint-staged": "^8.1.7",
+    "nodemon": "^1.19.1",
+    "prettier": "^1.17.1",
+    "ts-node": "^8.2.0"
   },
   "husky": {
     "hooks": {
