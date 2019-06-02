@@ -13,23 +13,50 @@ import Vue from 'vue'
 import p5 from 'p5'
 import 'p5/lib/addons/p5.dom'
 import socketCluster from 'socketcluster-client'
-import {Line, Circle} from '@/interfaces'
+import {Point, Line, Circle} from '@/interfaces'
 
-const applyPencil = (p: p5, data: any) => {
+const dist = (a: Point, b: Point): number => {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+}
+
+const calculateControlPoint = (a: Point, b: Point, k: number) => {
+  return {
+    x: a.x + k * (b.x - a.x),
+    y: a.y + k * (b.y - a.y),
+  }
+}
+
+const applyPencil = (p: p5, data: any, originalColor?: any) => {
+  if (data.lines.length === 0) return
   data.color && p.stroke(data.color)
-  data.lines.forEach((line: Line) =>
-    p.line(line.start.x, line.start.y, line.end.x, line.end.y),
-  )
+  if (data.lines.length === 1) {
+    const line = data.lines[0]
+    p.line(line.start.x, line.start.y, line.end.x, line.end.y)
+  } else {
+    const k = 0.3
+    let a = data.lines[0].start
+    let b = data.lines[0].end
+    let a1 = calculateControlPoint(a, b, 1 - k)
+    let b1, b2
+    p.line(a.x, a.y, a1.x, a1.y)
+    for (let i = 1; i < data.lines.length; i++) {
+      let c = data.lines[i].end
+      b1 = calculateControlPoint(b, c, k)
+      b2 = calculateControlPoint(b, c, 1 - k)
+      p.bezier(a1.x, a1.y, b.x, b.y, b.x, b.y, b1.x, b1.y)
+      p.line(b1.x, b1.y, b2.x, b2.y)
+      a = b
+      b = c
+      a1 = b2
+    }
+  }
+  originalColor && p.stroke(originalColor)
 }
 
 const applyRubber = (p: p5, data: any) => {
-  p.fill(255)
-  p.strokeWeight(0)
   data.circles.forEach((circle: Circle) => {
-    p.circle(circle.center.x, circle.center.y, circle.radius)
+    (p as any).drawingContext.clearRect(circle.center.x - circle.radius / 2, circle.center.y - circle.radius / 2, circle.radius, circle.radius)
   })
-  p.noFill()
-  p.strokeWeight(2)
 }
 
 const applyClear = (p: p5) => {
@@ -50,8 +77,11 @@ export default Vue.extend({
         .toString(16)
         .substr(2, 8),
       boardExist: false,
+      isDrawing: false,
+      lastX: 0,
+      lastY: 0,
       color: 'blue',
-      rubberRadius: 100,
+      rubberRadius: 50,
       mode: 'pencil',
       socket: null,
       channel: null,
@@ -122,28 +152,35 @@ export default Vue.extend({
         switch (this.mode) {
           case 'pencil':
             if (p.mouseIsPressed === true) {
-              p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY)
-              const line = {
-                end: {
-                  x: p.mouseX,
-                  y: p.mouseY,
-                },
-                start: {
-                  x: p.pmouseX,
-                  y: p.pmouseY,
-                },
+              if (!this.isDrawing) {
+                this.isDrawing = true
+                this.lastX = p.mouseX
+                this.lastY = p.mouseY
               }
-              applyPencil(p, {lines: [line], color: this.color})
-              lines.push(line)
-            } else if (lines.length > 0) {
-              this.socket.emit('draw', {
-                room: this.room,
-                id: this.id,
-                lines,
-                color: this.color,
-                mode: this.mode,
-              })
-              lines = []
+              if (dist({x: this.lastX, y: this.lastY}, {x: p.mouseX, y: p.mouseY}) > 4) {
+                applyPencil(p, {lines, color: '#FFFFFF'}, this.color)
+                const line = {
+                  end: {
+                    x: p.mouseX,
+                    y: p.mouseY,
+                  },
+                  start: {
+                    x: this.lastX,
+                    y: this.lastY,
+                  },
+                }
+                this.lastX = p.mouseX
+                this.lastY = p.mouseY
+                // applyPencil(p, {lines: [line], color})
+                lines.push(line)
+                applyPencil(p, {lines, color: this.color})
+              }
+            } else {
+              this.isDrawing = false
+              if (lines.length > 0) {
+                this.socket.emit('draw', {room: this.room, id: this.id, lines, color: this.color, mode: this.mode})
+                lines = []
+              }
             }
             return
           case 'rubber':

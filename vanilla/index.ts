@@ -14,7 +14,7 @@ const pRef = {current: null}
 let boardExist = false
 let mode = 'pencil'
 let color = 'blue'
-let rubberRadius = 100
+let rubberRadius = 50
 
 const dist = (a: Point, b: Point): number => {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
@@ -28,6 +28,7 @@ const calculateControlPoint = (a: Point, b: Point, k: number) => {
 }
 
 const applyPencil = (p: p5, data: any) => {
+  if (data.lines.length === 0) return
   data.color && p.stroke(data.color)
   if (data.lines.length === 1) {
     const line = data.lines[0]
@@ -50,21 +51,18 @@ const applyPencil = (p: p5, data: any) => {
       a1 = b2
     }
   }
+  p.stroke(color)
 }
 
 const applyRubber = (p: p5, data: any) => {
-  p.fill(255)
-  p.strokeWeight(0)
   data.circles.forEach((circle: Circle) => {
-    p.circle(circle.center.x, circle.center.y, circle.radius)
+    ;(p as any).drawingContext.clearRect(
+      circle.center.x - circle.radius / 2,
+      circle.center.y - circle.radius / 2,
+      circle.radius,
+      circle.radius,
+    )
   })
-  p.noFill()
-  p.strokeWeight(2)
-
-  /** Implementing a transparent rubber */
-  // data.circles.forEach((circle: Circle) => {
-  //   (p as any).drawingContext.clearRect(circle.center.x - circle.radius / 2, circle.center.y - circle.radius / 2, circle.radius, circle.radius)
-  // })
 }
 
 const applyClear = (p: p5) => {
@@ -128,8 +126,8 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
             lastX = p.mouseX
             lastY = p.mouseY
           }
-          if (dist({x: lastX, y: lastY}, {x: p.mouseX, y: p.mouseY}) > 10) {
-            p.line(lastX, lastY, p.mouseX, p.mouseY)
+          if (dist({x: lastX, y: lastY}, {x: p.mouseX, y: p.mouseY}) > 4) {
+            applyPencil(p, {lines, color: '#FFFFFF'})
             const line = {
               end: {
                 x: p.mouseX,
@@ -142,8 +140,9 @@ const sketch = (id: string, channel: any, socket: any) => (p: p5) => {
             }
             lastX = p.mouseX
             lastY = p.mouseY
-            applyPencil(p, {lines: [line], color})
+            // applyPencil(p, {lines: [line], color})
             lines.push(line)
+            applyPencil(p, {lines, color})
           }
         } else {
           isDrawing = false
