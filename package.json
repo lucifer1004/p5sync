@@ -21,10 +21,10 @@
     "vue"
   ],
   "devDependencies": {
-    "husky": "^2.3.0",
-    "lint-staged": "^8.1.7",
+    "husky": "^2.4.0",
+    "lint-staged": "^8.2.0",
     "nodemon": "^1.19.1",
-    "prettier": "^1.17.1",
+    "prettier": "^1.18.2",
     "ts-node": "^8.2.0"
   },
   "husky": {

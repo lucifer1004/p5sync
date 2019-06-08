@@ -14,7 +14,7 @@
     "cors": "^2.8.5",
     "elastic-apm-node": "^2.11.5",
     "express": "4.17.1",
-    "ioredis": "^4.9.5",
+    "ioredis": "^4.10.0",
     "minimist": "1.2.0",
     "morgan": "1.9.1",
     "sc-errors": "^2.0.0",
