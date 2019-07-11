@@ -12,9 +12,9 @@
   "dependencies": {
     "connect": "3.7.0",
     "cors": "^2.8.5",
-    "elastic-apm-node": "^2.11.6",
+    "elastic-apm-node": "^2.12.1",
     "express": "4.17.1",
-    "ioredis": "^4.10.0",
+    "ioredis": "^4.11.1",
     "minimist": "1.2.0",
     "morgan": "1.9.1",
     "sc-errors": "^2.0.0",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.5",
-    "@types/ioredis": "^4.0.12",
+    "@types/ioredis": "^4.0.13",
     "@types/minimist": "^1.2.0",
     "@types/morgan": "^1.7.35",
     "@types/sc-framework-health-check": "^2.0.0",
