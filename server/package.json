@@ -17,7 +17,7 @@
     "ioredis": "4.13.1",
     "minimist": "1.2.0",
     "morgan": "1.9.1",
-    "sc-errors": "2.0.0",
+    "sc-errors": "2.0.1",
     "sc-framework-health-check": "2.0.0",
     "sc-hot-reboot": "1.0.0",
     "sc-uws": "10.148.2",
