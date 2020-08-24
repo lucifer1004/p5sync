@@ -7,13 +7,13 @@
     "start": "parcel index.html"
   },
   "dependencies": {
-    "p5": "0.9.0",
+    "p5": "0.10.2",
     "socketcluster-client": "14.3.0"
   },
   "devDependencies": {
     "@types/jest": "24.0.15",
     "@types/node": "12.6.8",
-    "@types/p5": "0.7.3",
+    "@types/p5": "0.9.1",
     "@types/socketcluster-client": "13.0.3",
     "parcel": "1.12.3",
     "typescript": "3.5.3"
