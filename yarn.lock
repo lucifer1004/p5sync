@@ -1779,10 +1779,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.8.tgz#e5d71173c95533be9842b2c798978f095f912aab"
   integrity sha512-szA3x/3miL90ZJxUCzx9haNbK5/zmPieGraZEe4WI+3srN0eGLiT22NXeMHmyhNEopn+IrxqMc7wdVwvPl8meg==
 
-"@types/node@12.6.8":
-  version "12.6.8"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.6.8.tgz#e469b4bf9d1c9832aee4907ba8a051494357c12c"
-  integrity sha512-aX+gFgA5GHcDi89KG5keey2zf0WfZk/HAQotEamsK2kbey+8yGKcson0hbK8E+v0NArlCJQCqMP161YhV6ZXLg==
+"@types/node@12.20.15":
+  version "12.20.15"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.15.tgz#10ee6a6a3f971966fddfa3f6e89ef7a73ec622df"
+  integrity sha512-F6S4Chv4JicJmyrwlDkxUdGNSplsQdGwp1A0AJloEVDirWdZOAiRHhovDlsFkKUrquUXhz1imJhXHsf59auyAg==
 
 "@types/node@^8.0.7":
   version "8.10.48"
