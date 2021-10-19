@@ -16,7 +16,7 @@
     "@types/p5": "0.7.3",
     "@types/socketcluster-client": "13.0.3",
     "parcel": "1.12.3",
-    "typescript": "3.5.3"
+    "typescript": "3.9.10"
   },
   "browserslist": {
     "production": [
