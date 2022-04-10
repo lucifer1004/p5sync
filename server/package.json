@@ -15,7 +15,7 @@
     "elastic-apm-node": "2.12.1",
     "express": "4.17.1",
     "ioredis": "4.13.1",
-    "minimist": "1.2.0",
+    "minimist": "1.2.6",
     "morgan": "1.9.1",
     "sc-errors": "2.0.0",
     "sc-framework-health-check": "2.0.0",
