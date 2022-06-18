@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@types/jest": "24.0.15",
-    "@types/node": "12.6.8",
+    "@types/node": "12.20.55",
     "@types/p5": "0.7.3",
     "@types/socketcluster-client": "13.0.3",
     "parcel": "1.12.3",
