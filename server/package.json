@@ -38,7 +38,7 @@
     "start": "ts-node index.ts"
   },
   "devDependencies": {
-    "@types/cors": "2.8.5",
+    "@types/cors": "2.8.17",
     "@types/ioredis": "4.0.13",
     "@types/minimist": "1.2.0",
     "@types/morgan": "1.7.36",
