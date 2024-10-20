@@ -21,7 +21,7 @@
     "@vue/cli-plugin-babel": "3.9.2",
     "@vue/cli-plugin-typescript": "3.9.0",
     "@vue/cli-service": "3.9.3",
-    "stylus": "0.54.5",
+    "stylus": "0.64.0",
     "stylus-loader": "3.0.2",
     "typescript": "3.5.3",
     "vue-template-compiler": "2.6.10"
