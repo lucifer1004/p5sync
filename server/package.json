@@ -22,7 +22,7 @@
     "sc-hot-reboot": "1.0.0",
     "sc-uws": "10.148.2",
     "scc-broker-client": "6.1.0",
-    "serve-static": "1.14.1",
+    "serve-static": "1.16.0",
     "socketcluster": "14.3.5",
     "socketcluster-client": "14.3.0"
   },
